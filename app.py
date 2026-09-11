@@ -2,11 +2,8 @@
 =============================================================================
 INTERFACE STREAMLIT - SISTEMA DE ESTUDOS
 =============================================================================
-Este arquivo contém APENAS a camada de apresentação.
-Toda a persistência é delegada a database.py.
-
-Para rodar:
-    streamlit run app.py
+Correção: dropdown dependente (Disciplina -> Tópico) agora funciona em tempo real.
+Solução: removido st.form, usa st.session_state para reset após salvar.
 =============================================================================
 """
 
@@ -34,8 +31,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Inicializa banco de dados (idempotente)
+# Inicializa banco (idempotente)
 db.init_database()
+
+# Inicializa contador de reset do formulário
+if "form_reset" not in st.session_state:
+    st.session_state.form_reset = 0
 
 # -----------------------------------------------------------------------------
 # CSS CUSTOMIZADO
@@ -88,7 +89,7 @@ with col_h2:
     st.metric("Prova", CONCURSO_INFO["data_prova"].split(" ")[0])
 
 # -----------------------------------------------------------------------------
-# CRIA AS ABAS
+# ABAS
 # -----------------------------------------------------------------------------
 tab_reg, tab_dash, tab_cons, tab_edit, tab_metas, tab_sobre = st.tabs([
     "📝 Registrar",
@@ -101,96 +102,110 @@ tab_reg, tab_dash, tab_cons, tab_edit, tab_metas, tab_sobre = st.tabs([
 
 
 # =============================================================================
-# ABA 1: REGISTRAR
+# ABA 1: REGISTRAR (SEM st.form - dropdown dependente funcional)
 # =============================================================================
 with tab_reg:
     st.subheader("📝 Nova sessão de estudo")
 
-    with st.form("form_registro", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
+    # Contador que muda a cada salvamento -> força reset dos widgets
+    reset = st.session_state.form_reset
 
-        with col1:
-            data_input = st.date_input(
-                "Data do estudo",
-                value=date.today(),
-                max_value=date.today(),
-                help="Você pode registrar retroativamente",
-            )
+    # --- Linha 1: Data, Disciplina, Tópico ---
+    col1, col2, col3 = st.columns(3)
 
-        with col2:
-            disciplina_input = st.selectbox(
-                "Disciplina",
-                options=LISTA_DISCIPLINAS,
-                index=0,
-            )
-
-        with col3:
-            # Dropdown dependente: tópicos da disciplina escolhida
-            topico_input = st.selectbox(
-                "Tópico/Assunto",
-                options=DISCIPLINAS[disciplina_input],
-                index=0,
-            )
-
-        col4, col5, col6 = st.columns(3)
-
-        with col4:
-            horas_input = st.number_input(
-                "Horas estudadas",
-                min_value=0.0, max_value=24.0, step=0.25, value=1.0, format="%.2f",
-                help="Use 0.5 = 30min, 0.25 = 15min, 1.5 = 1h30",
-            )
-
-        with col5:
-            questoes_input = st.number_input(
-                "Questões feitas",
-                min_value=0, max_value=1000, step=1, value=0,
-            )
-
-        with col6:
-            acertos_input = st.number_input(
-                "Acertos",
-                min_value=0, max_value=1000, step=1, value=0,
-            )
-
-        observacoes_input = st.text_area(
-            "Observações (opcional)",
-            placeholder="Ex: revisar fórmula de Bhaskara, dúvida no tópico X...",
-            height=80,
+    with col1:
+        data_input = st.date_input(
+            "Data do estudo",
+            value=date.today(),
+            max_value=date.today(),
+            help="Você pode registrar retroativamente",
+            key=f"data_{reset}",
         )
 
-        # Validação em tempo real
-        erros_calc = max(questoes_input - acertos_input, 0)
-        if questoes_input > 0:
-            perc = acertos_input / questoes_input * 100
-            st.caption(f"📊 Erros: **{erros_calc}** • Aproveitamento: **{perc:.1f}%**")
+    with col2:
+        disciplina_input = st.selectbox(
+            "Disciplina",
+            options=LISTA_DISCIPLINAS,
+            index=0,
+            key=f"disc_{reset}",
+        )
 
-        # Validação: acertos não pode passar de questões
-        submit = st.form_submit_button("💾 Salvar sessão", type="primary", width="stretch")
+    with col3:
+        # ⚡ ESTA É A CORREÇÃO: key inclui a disciplina
+        # Quando a disciplina muda, a key muda, e o widget é recriado
+        topico_input = st.selectbox(
+            "Tópico/Assunto",
+            options=DISCIPLINAS[disciplina_input],
+            index=0,
+            key=f"top_{reset}_{disciplina_input}",
+        )
 
-        if submit:
-            if acertos_input > questoes_input:
-                st.error("❌ Acertos não pode ser maior que o total de questões.")
-            elif horas_input <= 0 and questoes_input <= 0:
-                st.warning("⚠️ Preencha pelo menos horas OU questões.")
+    # --- Linha 2: Horas, Questões, Acertos ---
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        horas_input = st.number_input(
+            "Horas estudadas",
+            min_value=0.0, max_value=24.0, step=0.25, value=1.0, format="%.2f",
+            help="Use 0.5 = 30min, 0.25 = 15min, 1.5 = 1h30",
+            key=f"horas_{reset}",
+        )
+
+    with col5:
+        questoes_input = st.number_input(
+            "Questões feitas",
+            min_value=0, max_value=1000, step=1, value=0,
+            key=f"quest_{reset}",
+        )
+
+    with col6:
+        acertos_input = st.number_input(
+            "Acertos",
+            min_value=0, max_value=1000, step=1, value=0,
+            key=f"acert_{reset}",
+        )
+
+    # --- Observações ---
+    observacoes_input = st.text_area(
+        "Observações (opcional)",
+        placeholder="Ex: revisar fórmula de Bhaskara, dúvida no tópico X...",
+        height=80,
+        key=f"obs_{reset}",
+    )
+
+    # --- Feedback em tempo real ---
+    erros_calc = max(questoes_input - acertos_input, 0)
+    if questoes_input > 0:
+        perc = acertos_input / questoes_input * 100
+        st.caption(f"📊 Erros: **{erros_calc}** • Aproveitamento: **{perc:.1f}%**")
+
+    # --- Botão Salvar ---
+    if st.button("💾 Salvar sessão", type="primary", use_container_width=True):
+        if acertos_input > questoes_input:
+            st.error("❌ Acertos não pode ser maior que o total de questões.")
+        elif horas_input <= 0 and questoes_input <= 0:
+            st.warning("⚠️ Preencha pelo menos horas OU questões.")
+        else:
+            novo_id = db.inserir_sessao(
+                data=data_input.strftime("%Y-%m-%d"),
+                disciplina=disciplina_input,
+                topico=topico_input,
+                horas=horas_input,
+                questoes=questoes_input,
+                acertos=acertos_input,
+                erros=erros_calc,
+                observacoes=observacoes_input,
+            )
+            if novo_id:
+                st.success(f"✅ Sessão salva com sucesso! (ID: {novo_id})")
+                st.balloons()
+                # ⚡ Incrementa o contador -> todos os widgets recebem novas keys
+                st.session_state.form_reset += 1
+                st.rerun()
             else:
-                novo_id = db.inserir_sessao(
-                    data=data_input.strftime("%Y-%m-%d"),
-                    disciplina=disciplina_input,
-                    topico=topico_input,
-                    horas=horas_input,
-                    questoes=questoes_input,
-                    acertos=acertos_input,
-                    erros=erros_calc,
-                    observacoes=observacoes_input,
-                )
-                if novo_id:
-                    st.success(f"✅ Sessão salva com sucesso! (ID: {novo_id})")
-                    st.balloons()
-                else:
-                    st.error("❌ Erro ao salvar. Verifique o console para detalhes.")
+                st.error("❌ Erro ao salvar. Verifique o console para detalhes.")
 
-    # Mostra as últimas 5 sessões registradas
+    # --- Últimas 5 sessões ---
     st.divider()
     st.subheader("🕐 Últimas 5 sessões registradas")
     ultimas = db.listar_sessoes({"limite": 5})
@@ -198,7 +213,7 @@ with tab_reg:
         df_ult = pd.DataFrame(ultimas)[
             ["id", "data", "disciplina", "topico", "horas", "questoes", "acertos", "erros"]
         ]
-        st.dataframe(df_ult, width="stretch", hide_index=True)
+        st.dataframe(df_ult, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma sessão registrada ainda. Comece pela primeira!")
 
@@ -209,7 +224,6 @@ with tab_reg:
 with tab_dash:
     st.subheader("📊 Dashboard de desempenho")
 
-    # KPIs principais
     stats = db.obter_estatisticas_gerais()
 
     k1, k2, k3, k4 = st.columns(4)
@@ -244,7 +258,6 @@ with tab_dash:
 
     st.divider()
 
-    # Linha 1: barras de horas + pizza de questões
     stats_disc = db.obter_estatisticas_por_disciplina()
 
     if stats_disc:
@@ -261,7 +274,7 @@ with tab_dash:
                 text_auto=".1f",
             )
             fig_horas.update_layout(showlegend=False, height=380)
-            st.plotly_chart(fig_horas, width="stretch")
+            st.plotly_chart(fig_horas, use_container_width=True)
 
         with c2:
             fig_pizza = px.pie(
@@ -272,9 +285,8 @@ with tab_dash:
                 hole=0.4,
             )
             fig_pizza.update_layout(height=380)
-            st.plotly_chart(fig_pizza, width="stretch")
+            st.plotly_chart(fig_pizza, use_container_width=True)
 
-        # Linha 2: aproveitamento por disciplina
         df_disc["perc"] = df_disc["percentual_acerto"] * 100
         fig_perc = px.bar(
             df_disc, x="disciplina", y="perc",
@@ -285,11 +297,10 @@ with tab_dash:
         )
         fig_perc.update_layout(showlegend=False, height=380)
         fig_perc.update_yaxes(range=[0, 100])
-        st.plotly_chart(fig_perc, width="stretch")
+        st.plotly_chart(fig_perc, use_container_width=True)
 
     st.divider()
 
-    # Evolução diária
     st.subheader("📈 Evolução diária (últimos 60 dias)")
     stats_dia = db.obter_estatisticas_diarias(dias=60)
 
@@ -315,11 +326,10 @@ with tab_dash:
             hovermode="x unified",
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
         )
-        st.plotly_chart(fig_linha, width="stretch")
+        st.plotly_chart(fig_linha, use_container_width=True)
     else:
         st.info("Sem dados para exibir. Registre suas primeiras sessões!")
 
-    # Heatmap disciplina x semana
     st.subheader("🗓️ Heatmap: disciplina × semana (últimas 12 semanas)")
     stats_sem = db.obter_estatisticas_semanais(semanas=12)
     if stats_sem and len(stats_sem) > 1:
@@ -337,7 +347,7 @@ with tab_dash:
                 labels=dict(x="Semana", y="Disciplina", color="Horas"),
             )
             fig_heat.update_layout(height=300)
-            st.plotly_chart(fig_heat, width="stretch")
+            st.plotly_chart(fig_heat, use_container_width=True)
     else:
         st.info("Dados insuficientes para o heatmap (mínimo 2 semanas).")
 
@@ -348,7 +358,6 @@ with tab_dash:
 with tab_cons:
     st.subheader("🔍 Consultar histórico")
 
-    # Filtros
     colf1, colf2, colf3, colf4 = st.columns(4)
     with colf1:
         data_ini = st.date_input("De:", value=date.today() - timedelta(days=90), key="f_ini")
@@ -389,9 +398,8 @@ with tab_cons:
         df_view["% Acerto"] = (df_view["% Acerto"] * 100).round(1).astype(str) + "%"
 
         st.caption(f"📋 {len(df_view)} registros encontrados")
-        st.dataframe(df_view, width="stretch", hide_index=True, height=450)
+        st.dataframe(df_view, use_container_width=True, hide_index=True, height=450)
 
-        # Exportar CSV
         csv = df_view.to_csv(index=False).encode("utf-8")
         st.download_button(
             "⬇️ Baixar CSV",
@@ -400,7 +408,6 @@ with tab_cons:
             mime="text/csv",
         )
 
-        # Exportar Excel
         buffer = BytesIO()
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             df_view.to_excel(writer, index=False, sheet_name="Estudos")
@@ -434,38 +441,34 @@ with tab_edit:
         s = db.obter_sessao(id_sel)
 
         if s:
-            with st.form("form_edicao"):
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    nova_data = st.date_input(
-                        "Data",
-                        value=datetime.strptime(str(s["data"]), "%Y-%m-%d").date(),
-                    )
-                with c2:
-                    idx_disc = LISTA_DISCIPLINAS.index(s["disciplina"]) if s["disciplina"] in LISTA_DISCIPLINAS else 0
-                    nova_disc = st.selectbox("Disciplina", LISTA_DISCIPLINAS, index=idx_disc)
-                with c3:
-                    topicos_disp = DISCIPLINAS[nova_disc]
-                    idx_top = topicos_disp.index(s["topico"]) if s["topico"] in topicos_disp else 0
-                    novo_top = st.selectbox("Tópico", topicos_disp, index=idx_top)
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                nova_data = st.date_input(
+                    "Data",
+                    value=datetime.strptime(str(s["data"]), "%Y-%m-%d").date(),
+                    key="edit_data",
+                )
+            with c2:
+                idx_disc = LISTA_DISCIPLINAS.index(s["disciplina"]) if s["disciplina"] in LISTA_DISCIPLINAS else 0
+                nova_disc = st.selectbox("Disciplina", LISTA_DISCIPLINAS, index=idx_disc, key="edit_disc")
+            with c3:
+                topicos_disp = DISCIPLINAS[nova_disc]
+                idx_top = topicos_disp.index(s["topico"]) if s["topico"] in topicos_disp else 0
+                novo_top = st.selectbox("Tópico", topicos_disp, index=idx_top, key=f"edit_top_{nova_disc}")
 
-                c4, c5, c6 = st.columns(3)
-                with c4:
-                    novas_horas = st.number_input("Horas", value=float(s["horas"]), step=0.25, min_value=0.0)
-                with c5:
-                    novas_questoes = st.number_input("Questões", value=int(s["questoes"]), step=1, min_value=0)
-                with c6:
-                    novos_acertos = st.number_input("Acertos", value=int(s["acertos"]), step=1, min_value=0)
+            c4, c5, c6 = st.columns(3)
+            with c4:
+                novas_horas = st.number_input("Horas", value=float(s["horas"]), step=0.25, min_value=0.0, key="edit_horas")
+            with c5:
+                novas_questoes = st.number_input("Questões", value=int(s["questoes"]), step=1, min_value=0, key="edit_quest")
+            with c6:
+                novos_acertos = st.number_input("Acertos", value=int(s["acertos"]), step=1, min_value=0, key="edit_acert")
 
-                novas_obs = st.text_area("Observações", value=s.get("observacoes") or "", height=80)
+            novas_obs = st.text_area("Observações", value=s.get("observacoes") or "", height=80, key="edit_obs")
 
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    salvar = st.form_submit_button("💾 Salvar alterações", type="primary", width="stretch")
-                with col_b:
-                    excluir = st.form_submit_button("🗑️ Excluir sessão", width="stretch")
-
-                if salvar:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("💾 Salvar alterações", type="primary", use_container_width=True):
                     if novos_acertos > novas_questoes:
                         st.error("❌ Acertos não pode ser maior que questões.")
                     else:
@@ -485,7 +488,8 @@ with tab_edit:
                         else:
                             st.error("❌ Erro ao atualizar.")
 
-                if excluir:
+            with col_b:
+                if st.button("🗑️ Excluir sessão", use_container_width=True):
                     if db.deletar_sessao(id_sel):
                         st.success("🗑️ Sessão excluída!")
                         st.rerun()
@@ -499,7 +503,6 @@ with tab_edit:
 with tab_metas:
     st.subheader("🎯 Metas de estudo")
 
-    # Metas configuráveis
     c1, c2 = st.columns(2)
     with c1:
         meta_horas = st.number_input(
@@ -514,9 +517,8 @@ with tab_metas:
             value=META_QUESTOES_SEMANAL_PADRAO, step=10,
         )
 
-    # Calcula progresso da semana atual (segunda a domingo)
     hoje = date.today()
-    inicio_semana = hoje - timedelta(days=hoje.weekday())   # segunda
+    inicio_semana = hoje - timedelta(days=hoje.weekday())
     fim_semana = inicio_semana + timedelta(days=6)
 
     stats_sem_atual = db.listar_sessoes({
@@ -548,7 +550,6 @@ with tab_metas:
 
     st.divider()
 
-    # Histórico semanal
     st.subheader("📅 Histórico das últimas 12 semanas")
     stats_hist = db.obter_estatisticas_semanais(semanas=12)
     if stats_hist:
@@ -561,7 +562,7 @@ with tab_metas:
             "horas": "Horas", "questoes": "Questões",
             "acertos": "Acertos", "erros": "Erros", "perc": "% Acerto",
         })
-        st.dataframe(df_view, width="stretch", hide_index=True)
+        st.dataframe(df_view, use_container_width=True, hide_index=True)
 
 
 # =============================================================================
@@ -594,7 +595,7 @@ with tab_sobre:
     - 15% → Legislação Municipal
 
     ### 🛠️ Stack técnica
-    - Python 3.9+ / PostgreSQL (Supabase) / Streamlit / Pandas / Plotly
+    - Python / PostgreSQL (Supabase) / Streamlit / Pandas / Plotly
 
     ### 📂 Estrutura
     - `config.py` → constantes

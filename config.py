@@ -2,72 +2,96 @@
 =============================================================================
 CONFIGURAÇÕES CENTRAIS DO SISTEMA DE ESTUDOS
 =============================================================================
-Este módulo contém apenas constantes. Não importa nada além do Python padrão.
-Toda a lógica de negócio fica em database.py, e a UI fica em app.py.
+Baseado no ANEXO VII do Edital 01/2026 de Queimados/RJ
+Cargo: Agente Administrativo (Nível Médio Completo)
 =============================================================================
 """
 
 # -----------------------------------------------------------------------------
-# ESTRUTURA DE DISCIPLINAS E TÓPICOS
-# Baseado no Anexo VII do Edital 01/2026 de Queimados/RJ
+# ESTRUTURA DE DISCIPLINAS E TÓPICOS (conforme ANEXO VII do Edital)
 # -----------------------------------------------------------------------------
 DISCIPLINAS: dict[str, list[str]] = {
+    # -------------------------------------------------------------------------
+    # LÍNGUA PORTUGUESA (11 tópicos do edital, com subdivisões didáticas)
+    # -------------------------------------------------------------------------
     "Língua Portuguesa": [
-        "Interpretação de Texto",
-        "Vocabulário (sinonímia, antonímia, polissemia)",
-        "Ortografia e Acentuação",
-        "Pontuação",
-        "Pronomes",
-        "Verbos",
-        "Preposições e Conjunções",
-        "Substantivos e Adjetivos",
+        "Leitura, Compreensão e Interpretação de Texto",
+        "Vocabulário (denotação, conotação, sinonímia, antonímia, homonímia, paronímia, polissemia)",
+        "Ortografia e Acentuação Gráfica",
+        "Pontuação (todos os sinais)",
+        "Pronomes (classificação, emprego e colocação)",
+        "Verbos (modos, tempos, flexões e vozes)",
+        "Preposições (relações semânticas)",
+        "Conjunções (classificação e relações)",
+        "Substantivos (classificação e flexões)",
+        "Adjetivos (classificação e flexões)",
         "Termos da Oração",
         "Coordenação e Subordinação",
+        "Classificação de Períodos e Orações",
         "Concordância Nominal e Verbal",
         "Regência Nominal e Verbal",
         "Crase",
-        "Simulado/Revisão Geral",
+        "Simulado / Revisão Geral",
     ],
+
+    # -------------------------------------------------------------------------
+    # LEGISLAÇÃO MUNICIPAL (2 tópicos do edital, com subdivisões da Lei 1.060)
+    # -------------------------------------------------------------------------
     "Legislação Municipal": [
-        "Lei Orgânica do Município de Queimados",
-        "Lei 1.060/2011 - Regime Jurídico",
+        "Lei Orgânica do Município de Queimados/RJ",
+        "Lei 1.060/2011 - Regime Jurídico dos Servidores",
         "Lei 1.060/2011 - Provimento e Vacância",
         "Lei 1.060/2011 - Direitos e Vantagens",
         "Lei 1.060/2011 - Deveres e Proibições",
         "Lei 1.060/2011 - Responsabilidades",
         "Lei 1.060/2011 - Processo Disciplinar",
-        "Simulado/Revisão Geral",
+        "Simulado / Revisão Geral",
     ],
+
+    # -------------------------------------------------------------------------
+    # CONHECIMENTOS ESPECÍFICOS (11 tópicos do edital, com subdivisões)
+    # -------------------------------------------------------------------------
     "Conhecimentos Específicos": [
-        "Administração Pública - Princípios",
-        "Administração Pública - Organização",
+        "Administração Pública - Conceitos e Princípios",
+        "Administração Pública - Organização (Direta e Indireta)",
         "Atos Administrativos",
         "Poderes Administrativos",
-        "Administração Geral - Funções",
-        "O&M e Fluxogramas",
+        "Administração Geral - Funções Administrativas",
+        "Organização e Métodos (O&M)",
+        "Fluxogramas, Organogramas e Rotinas Administrativas",
         "Gestão por Processos",
-        "Administração de RH",
-        "Rotinas de Pessoal",
-        "Administração de Materiais",
+        "Recrutamento e Seleção",
+        "Treinamento e Desenvolvimento",
+        "Avaliação de Desempenho",
+        "Rotinas de Pessoal (Frequência, Férias, Registros)",
+        "Gestão de Materiais (Compras, Recebimento, Armazenamento, Distribuição)",
         "Controle de Estoque",
-        "Patrimônio e Inventário",
+        "Inventário de Bens",
+        "Controle Patrimonial",
         "Orçamento Público",
-        "Execução Orçamentária",
-        "Arquivologia",
-        "Protocolo e Gestão Documental",
-        "Redação Oficial",
-        "Legislação Administrativa",
-        "Planejamento e Controle",
+        "Receita e Despesa Pública",
+        "Execução Orçamentária e Financeira",
+        "Controle de Gastos Públicos",
+        "Arquivologia - Conceitos",
+        "Classificação, Organização e Conservação de Documentos",
+        "Protocolo (Recebimento, Registro, Tramitação, Expedição)",
+        "Arquivo Físico e Digital",
+        "Redação Oficial (Ofício, Memorando, Relatório)",
+        "Manual de Redação da Presidência da República",
+        "Legislação e Normas Administrativas",
+        "Planejamento e Controle Administrativo",
+        "Análise de Dados e Relatórios",
         "Indicadores de Desempenho",
-        "Ética no Serviço Público",
+        "Ética e Conduta no Serviço Público",
         "Informática Básica",
-        "Simulado/Revisão Geral",
+        "Simulado / Revisão Geral",
     ],
 }
 
 # -----------------------------------------------------------------------------
 # PESOS DA PROVA (para priorização de estudo)
-# Total = 100 pontos (10 questões LP x 2 + 5 questões LM x 1 + 15 questões CE x 5)
+# Total = 100 pontos
+# LP: 10 questões x 2 pts | LM: 5 questões x 1 pt | CE: 15 questões x 5 pts
 # -----------------------------------------------------------------------------
 PESOS_PROVA: dict[str, int] = {
     "Língua Portuguesa": 20,
@@ -82,12 +106,12 @@ META_HORAS_SEMANAL_PADRAO = 15.0
 META_QUESTOES_SEMANAL_PADRAO = 100
 
 # -----------------------------------------------------------------------------
-# LISTA DE DISCIPLINAS (atalho útil)
+# LISTA DE DISCIPLINAS (atalho)
 # -----------------------------------------------------------------------------
 LISTA_DISCIPLINAS = list(DISCIPLINAS.keys())
 
 # -----------------------------------------------------------------------------
-# CORES DOS GRÁFICOS (paleta fixa por disciplina)
+# CORES DOS GRÁFICOS
 # -----------------------------------------------------------------------------
 CORES_DISCIPLINAS = {
     "Língua Portuguesa": "#2E86AB",
