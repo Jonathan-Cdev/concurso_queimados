@@ -1,0 +1,17 @@
+# Segredos (NUNCA subir para o Git)
+.streamlit/secrets.toml
+
+# Banco de dados local antigo
+data/
+*.db
+
+# Ambiente virtual
+.venv/
+venv/
+
+# Bytecode Python
+__pycache__/
+*.py[cod]
+
+# Streamlit
+.streamlit/

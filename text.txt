@@ -1,0 +1,13 @@
+concurso_queimados/
+├── .gitignore               ← NOVO (evita subir dados sensíveis)
+├── .streamlit/
+│   └── secrets.toml         ← NOVO (para teste local)
+├── README.md                ← Substituir
+├── requirements.txt         ← Substituir
+├── config.py                ← Substituir
+├── database.py              ← Substituir (agora usa PostgreSQL)
+└── app.py                   ← Substituir (pequeno ajuste)
+
+
+
+0lWCuZovcVpCXklZ
